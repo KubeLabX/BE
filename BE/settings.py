@@ -36,9 +36,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'class.apps.KubelabxConfig',
+    'course.apps.KubelabxConfig',
 
     'user',
+    'course',
 ]
 
 MIDDLEWARE = [
