@@ -1,5 +1,5 @@
 from course.models import Course
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from user.models import User
 from django.http import JsonResponse
 
@@ -49,3 +49,16 @@ def list_up_courses(request):
             for c in courses
         ]
         return JsonResponse({"courses": course_data}, status=200)
+
+@require_http_methods(['DELETE'])
+def end_course(request, course_id):
+    try:
+        course = Course.objects.get(id=course_id)
+    except Course.DoesNotExist:
+        return JsonResponse({"error": "Course not found"}, status=404)
+
+    if course.teacher != request.user:
+        return JsonResponse({"error": "Only the teacher can end this course"}, status=403)
+
+    course.delete()
+    return JsonResponse({"message": "Course ended successfully"}, status=200)
