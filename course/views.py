@@ -19,4 +19,4 @@ def create_course(request):
 
     course = Course.objects.create(name=name, teacher=request.user)
 
-    return JsonResponse({"message": "Course Created Successfully"}, status=201)
+    return JsonResponse({"message": "Course created successfully"}, status=201)
