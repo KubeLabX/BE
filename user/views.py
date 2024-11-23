@@ -39,8 +39,8 @@ def login_view(request):
 
     if user is not None:
         if user.user_type != user_type:
-            return JsonResponse({'message': 'Invalid user type.'}, status=400)
+            return JsonResponse({'error': 'Invalid user type.'}, status=400)
         login(request, user)
         return JsonResponse({'message':'login successful'}, status = 200)
     else:
-        return JsonResponse({'message':'invalid credentials'}, status = 400)
+        return JsonResponse({'error':'invalid credentials'}, status = 400)
