@@ -130,3 +130,50 @@ class CourseEndTest(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()['error'], 'Authentication required')
     """
+
+class RegisterCourseTest(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create_user(
+            user_id=1001, first_name='Professor', password='password', user_type='t'
+        )
+        self.student = User.objects.create_user(
+            user_id=9001, first_name='Student1', password='password', user_type='s'
+        )
+        self.course = Course.objects.create(name='Cloud', teacher=self.teacher)
+        self.register_course_url = reverse('register_course')
+
+    def test_register_course(self):
+        self.client.login(user_id=self.student.user_id, password='password')
+        response = self.client.post(self.register_course_url, {'code': self.course.code})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['message'], 'Course registered successfully')
+        self.assertIn(self.student, self.course.participants.all())
+
+    def test_fail_course_not_found(self):
+        self.client.login(user_id=self.student.user_id, password='password')
+        response = self.client.post(self.register_course_url, {'code': 'INVALID'})
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['error'], 'Course not found')
+
+    def test_fail_already_registered(self):
+        self.client.login(user_id=self.student.user_id, password='password')
+        self.course.participants.add(self.student)
+
+        response = self.client.post(self.register_course_url, {'code': self.course.code})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'You are already registered for this course')
+
+    def test_fail_teacher_register(self):
+        self.client.login(user_id=self.teacher.user_id, password='password')
+        response = self.client.post(self.register_course_url, {'code': self.course.code})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Teachers cannot register for courses')
+
+    def test_fail_unauthenticated_user(self):
+        response = self.client.post(self.register_course_url, {'code': self.course.code})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['error'], 'Unauthorized')

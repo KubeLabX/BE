@@ -62,3 +62,25 @@ def end_course(request, course_id):
 
     course.delete()
     return JsonResponse({"message": "Course ended successfully"}, status=200)
+
+@require_POST
+def register_course(request):
+    if not request.user.is_authenticated or not isinstance(request.user, User):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    if request.user.user_type == 't':
+        return JsonResponse({"error": "Teachers cannot register for courses"}, status=403)
+
+    code = request.POST.get('code')
+    if not code:
+        return JsonResponse({"error": "Code is required"}, status=400)
+
+    try:
+        course = Course.objects.get(code=code)
+    except Course.DoesNotExist:
+        return JsonResponse({"error": "Course not found"}, status=404)
+
+    if course.participants.filter(id = request.user.id).exists():
+        return JsonResponse({"error": "You are already registered for this course"}, status=400)
+
+    course.participants.add(request.user)
+    return JsonResponse({"message": "Course registered successfully"}, status=200)
