@@ -1,7 +1,5 @@
 import json
 from django.views.decorators.csrf import csrf_exempt
-
-import course
 from course.models import Course
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from user.models import User
