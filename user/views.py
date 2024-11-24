@@ -1,12 +1,15 @@
 from django.contrib.auth import login, authenticate
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import User
 from django.http import JsonResponse
+import json
 
 # Create your views here.
+@csrf_exempt
 @require_POST
 def sign_up_view(request):
-    data = request.POST
+    data = json.loads(request.body)
 
     user_type = data.get('user_type', 's')
     user_id = data.get("user_id")
