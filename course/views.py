@@ -1,4 +1,5 @@
 import json
+from venv import logger
 from django.views.decorators.csrf import csrf_exempt
 from course.models import Course
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
@@ -11,7 +12,8 @@ from django.http import JsonResponse
 @require_POST
 def create_course(request):
     if not request.user.is_authenticated or not isinstance(request.user, User):
-        return JsonResponse({"error": "Unauthorized"}, status=401)
+        logger.debug(f"Debug User: {request.user}")  # 로그에 사용자 정보 기록
+        return JsonResponse({"error": "Unauthorized", "접근 시도 사용자": str(request.user)}, status=401)
 
     if request.user.user_type != 't':
         return JsonResponse({"error": "Only teachers can create courses"}, status=403)
