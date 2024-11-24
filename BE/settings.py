@@ -55,7 +55,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
-CSRF_TRUSTED_ORIGINS = ["http://localhost:3001"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:3001", "http://localhost:3000"]
 ALLOWED_HOSTS = ['*']
 SESSION_COOKIE_AGE = 3600
 
