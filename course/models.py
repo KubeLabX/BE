@@ -10,6 +10,8 @@ class Course(models.Model):
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'user_type': 't'})
     created_at = models.DateTimeField(auto_now_add=True)
     participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='courses', blank=True)
+    namespace = models.CharField(max_length=50, unique=True, null=True, blank=True)
+
 
     def save(self, *args, **kwargs):
         if not self.code: # PUT, PATCH 시 미적용
@@ -18,6 +20,8 @@ class Course(models.Model):
                 if not Course.objects.filter(code=new_code).exists():
                     self.code = new_code
                     break
+        if not self.namespace:
+            self.namespace = f"course-{self.id}"
         super().save(*args, **kwargs)
 
     def __str__(self):
