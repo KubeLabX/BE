@@ -1,5 +1,7 @@
 import json
 from django.views.decorators.csrf import csrf_exempt
+
+import course
 from course.models import Course
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from user.models import User
@@ -35,6 +37,7 @@ def list_up_courses(request):
         courses = Course.objects.filter(teacher=request.user)
         course_data = [
             {
+                "id": c.id,
                 'name': c.name,
                 'participant_count': c.participants.count(),
                 'created_at': c.created_at,
