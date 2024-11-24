@@ -30,9 +30,10 @@ def sign_up_view(request):
     login(request, user)
     return JsonResponse({'message':'User registered successfully'}, status = 201)
 
+@csrf_exempt
 @require_POST
 def login_view(request):
-    data = request.POST
+    data = json.loads(request.body)
 
     user_type = data.get('user_type')
     user_id = data.get("user_id")
