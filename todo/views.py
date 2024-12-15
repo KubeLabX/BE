@@ -23,24 +23,28 @@ def add_todo(request, course_id):
         course = Course.objects.get(id=course_id, teacher=request.user)
 
         data = json.loads(request.body)
-        content = data.get("content")
-        if not content:
+        todos = data.get("todos", [])  # 클라이언트에서 todos 배열을 보낸다고 가정
+        if not todos:
             return JsonResponse({"error": "No content"}, status=400)
 
-        todo = ToDo.objects.create(course = course, content = content)
+        created_todos = []
+        for content in todos:
+            if content.strip():  # 빈 값은 제외
+                todo = ToDo.objects.create(course=course, content=content)
+                created_todos.append({"id": todo.id, "content": todo.content})
 
         return JsonResponse({
-            "message": "To-Do added successfully"
+            "message": "To-Do(s) added successfully",
+            "todos": created_todos  # 생성된 ToDo 리스트 반환
         }, status=201)
 
-        # 잘못된 형식
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
     except Course.DoesNotExist:
         return JsonResponse({"error": "Course not found"}, status=404)
-        # 서버 오류
     except Exception as e:
         return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
+
 
 
 @csrf_exempt

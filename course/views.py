@@ -182,13 +182,48 @@ def enter_course(request, course_id):
     try:
         user = request.user
         course = Course.objects.get(id=course_id)
+
         if user.user_type == 't' and course.teacher != user:
             return JsonResponse({"error": "Unauthorized access"}, status=403)
         if user.user_type == 's' and user not in course.participants.all():
             return JsonResponse({"error": "You are not registered for this course"}, status=403)
-        return JsonResponse({"course_name": course.name}, status=200)
+        return JsonResponse({
+            "course_name": course.name,
+            "user_name": user.first_name,
+            "course_code" : course.code,  # 현재 로그인한 사용자 이름 추가
+        }, status=200)
 
     except Course.DoesNotExist:
         return JsonResponse({"error": "Course not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def get_course_progress(request, course_id):
+    try:
+        course = Course.objects.get(id=course_id)
+        
+        # 교수자 권한 확인
+        if request.user != course.teacher:
+            return JsonResponse({"error": "Unauthorized access"}, status=403)
+            
+        # 학생 목록과 진행률 데이터
+        participants_data = [{
+            'name': student.first_name,
+            'id': student.user_id,
+            'progress': 0  # 추후 실제 진행률 로직 추가
+        } for student in course.participants.all()]
+        
+        response_data = {
+            'course_name': course.name,
+            'user_name': request.user.first_name,
+            'participants': participants_data
+        }
+        print(response_data)
+        
+        return JsonResponse(response_data, status=200)
+        
+    except Course.DoesNotExist:
+        return JsonResponse({"error": "Course not found"}, status=404)
