@@ -102,7 +102,9 @@ def list_up_courses(request):
 
 
 @csrf_exempt
-@require_http_methods(['DELETE'])
+@api_view(['DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
 def end_course(request, course_id):
     try:
         course = Course.objects.get(id=course_id)

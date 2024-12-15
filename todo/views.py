@@ -1,16 +1,16 @@
 import json
-
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
 from course.models import Course
 from todo.models import ToDo
 
 
 # Create your views here.
+@csrf_exempt
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 @api_view(['POST'])
@@ -43,6 +43,7 @@ def add_todo(request, course_id):
         return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
 
 
+@csrf_exempt
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
