@@ -3,7 +3,7 @@ certifi==2024.8.30
 charset-normalizer==3.4.0
 contourpy==1.2.1
 cycler==0.12.1
-Django==5.0.7
+Django==4.2.11
 django-environ==0.11.2
 fonttools==4.51.0
 idna==3.10
@@ -29,3 +29,8 @@ threadpoolctl==3.5.0
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==2.2.3
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==3.12.0
+shortuuid==0.4.2
+
