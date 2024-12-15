@@ -171,3 +171,22 @@ def register_course(request):
         return JsonResponse({
             "error": "Failed to register for course"
         }, status=500)
+
+
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def enter_course(request, course_id):
+    try:
+        user = request.user
+        course = Course.objects.get(id=course_id)
+        if user.user_type == 't' and course.teacher != user:
+            return JsonResponse({"error": "Unauthorized access"}, status=403)
+        if user.user_type == 's' and user not in course.participants.all():
+            return JsonResponse({"error": "You are not registered for this course"}, status=403)
+        return JsonResponse({"course_name": course.name}, status=200)
+
+    except Course.DoesNotExist:
+        return JsonResponse({"error": "Course not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
