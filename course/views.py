@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+
 @csrf_exempt
 # JWT 토큰 인증 요구
 @authentication_classes([JWTAuthentication])
@@ -49,9 +50,6 @@ def create_course(request):
     #서버 오류
     except Exception:
         return JsonResponse({"error": "Internal server error"}, status=500)
-
-
-
 
 
 @csrf_exempt
@@ -116,6 +114,7 @@ def end_course(request, course_id):
 
     course.delete()
     return JsonResponse({"message": "Course ended successfully"}, status=200)
+
 
 @csrf_exempt
 @api_view(['POST']) 
