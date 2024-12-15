@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     'user',
     'course',
+    'todo',
     'corsheaders'
 ]
 
