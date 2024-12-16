@@ -30,19 +30,31 @@ def create_course(request):
             name=name.strip(),
             teacher=request.user
         )
-        config.load_incluster_config()
-        v1 = client.CoreV1Api()
-        namespace_manifest = {
-            "apiVersion": "v1",
-            "kind": "Namespace",
-            "metadata": {
-                "name": f"course-{course.id}"
-            }
-        }
-        if any(ns.metadata.name == namespace_manifest['metadata']['name'] for ns in v1.list_namespace().items):
-            return JsonResponse({"error": "Namespace already exists"}, status=400)
+        try:
+            print("[INFO] Attempting to load Kubernetes configuration.")
+            config.load_kube_config()  # Kubernetes 클러스터 설정 로드
+            print("[INFO] Kubernetes configuration loaded successfully.")
+            v1 = client.CoreV1Api()
 
-        v1.create_namespace(body=namespace_manifest)
+            namespace_manifest = {
+                "apiVersion": "v1",
+                "kind": "Namespace",
+                "metadata": {
+                    "name": f"course-{course.id}"
+                }
+            }
+            print("[INFO] Namespace manifest prepared:", namespace_manifest)
+
+            v1.create_namespace(body=namespace_manifest)
+            print("[INFO] Namespace created successfully for course:", course.id)
+
+
+        except client.exceptions.ApiException as e:
+            print(f"K8s API Exception: {str(e)}")  # 로그 추가
+            # Kubernetes 네임스페이스 생성 실패 시 수업 삭제
+            course.delete()
+            print(f"Course {course.id} deleted successfully")
+            return JsonResponse({"error": f"Failed to create Kubernetes namespace: {e}"}, status=500)
 
         return JsonResponse({
             "message": "Course created successfully",
@@ -166,11 +178,14 @@ def register_course(request):
         try:
             pod_name = f"{course.name.lower()}-{request.user.id}"
             namespace = f"course-{course.id}"
+            print(f"Creating Pod: {pod_name} in namespace: {namespace}")
+
 
             if StudentPod.objects.filter(student=request.user, course=course).exists():
                 return JsonResponse({"message": "You have already been assigned a Pod.", "pod_name": pod_name}, status=200)
 
             config.load_incluster_config()
+            print("Kubernetes configuration loaded.")
             v1 = client.CoreV1Api()
             pod_manifest = {
                 "apiVersion": "v1",
@@ -183,7 +198,7 @@ def register_course(request):
                     "containers": [
                         {
                             "name": "terminal",
-                            "image": "linux-terminal-image",
+                            "image": "ubuntu",
                             "resources": {
                                 "limits": {
                                     "cpu": "200m",
@@ -194,10 +209,16 @@ def register_course(request):
                     ]
                 }
             }
+            print("Pod manifest prepared:", pod_manifest)
+
             v1.create_namespaced_pod(namespace=namespace, body=pod_manifest)
+            print("Pod created successfully in Kubernetes:", pod_name)
+
             StudentPod.objects.create(student=request.user, course=course, pod_name=pod_name)
+            print("Pod information saved in database:", pod_name)
 
         except client.exceptions.ApiException as e:
+            print("Kubernetes API exception occurred:", str(e))
             return JsonResponse({"error": f"Failed to create Pod: {e}"}, status=500)
 
         # 성공 응답(수업 id,name도 반환)
@@ -211,6 +232,7 @@ def register_course(request):
         return JsonResponse({"error": "Invalid request format"}, status=400)
     
     except Exception as e:
+        print("Unexpected error occurred during course registration:", str(e))
         return JsonResponse({"error": f"Failed to register for course: {e}"}, status=500)
 
 
