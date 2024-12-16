@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     'todo',
     'corsheaders',
     'channels',
-    'practice',
 ]
 
 MIDDLEWARE = [
