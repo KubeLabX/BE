@@ -1,5 +1,6 @@
 import json
 from django.views.decorators.csrf import csrf_exempt
+from kubernetes.client import ApiException
 from course.models import Course
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -130,8 +131,7 @@ def end_course(request, course_id):
     except ApiException as e:
         return JsonResponse({"error": f"Kubernetes API error: {e.reason}"}, status=500)
     except Exception as e:
-        logger.error(f"Unexpected error during course end: {str(e)}")
-        return JsonResponse({"error": "Internal server error"}, status=500)
+        return JsonResponse({"error": f"Internal server error: {e}"}, status=500)
 
     course.delete()
 
