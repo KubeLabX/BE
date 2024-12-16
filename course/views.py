@@ -115,7 +115,26 @@ def end_course(request, course_id):
     if course.teacher != request.user:
         return JsonResponse({"error": "Only the teacher can end this course"}, status=403)
 
+    try:
+        config.load_incluster_config()
+        v1 = client.CoreV1Api()
+
+        namespace_name = f"course-{course_id}"
+
+        try:
+            v1.delete_namespace(name=namespace_name)
+        except ApiException as e:
+            if e.status != 404:
+                return JsonResponse({"error": f"Failed to delete namespace: {e.reason}"}, status=500)
+
+    except ApiException as e:
+        return JsonResponse({"error": f"Kubernetes API error: {e.reason}"}, status=500)
+    except Exception as e:
+        logger.error(f"Unexpected error during course end: {str(e)}")
+        return JsonResponse({"error": "Internal server error"}, status=500)
+
     course.delete()
+
     return JsonResponse({"message": "Course ended successfully"}, status=200)
 
 
@@ -251,7 +270,7 @@ def drop_course(request, course_id):
         try:
             pod_name = f"{course.name.lower()}-{request.user.id}"
             namespace = f"course-{course.id}"
-            config.load_kube_config()
+            config.load_incluster_config()
             v1 = client.CoreV1Api()
             v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
 
