@@ -7,12 +7,10 @@ from asgiref.sync import sync_to_async
 
 class PodTerminalConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # 학생 인증 확인
         if not self.scope["user"].is_authenticated or self.scope["user"].user_type != "s":
             await self.close(code=401)
             return
 
-        # Pod 정보 가져오기
         self.course_id = self.scope["url_route"]["kwargs"]["course_id"]
         self.user = self.scope["user"]
 
