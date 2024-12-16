@@ -91,7 +91,7 @@ def list_up_courses(request):
 
         else:
             return JsonResponse({"error": "Invalid user role"}, status=400)
-        
+
         return JsonResponse({
             "courses": course_data,
             "name": user_name,
@@ -167,8 +167,8 @@ def register_course(request):
                             "image": "linux-terminal-image",
                             "resources": {
                                 "limits": {
-                                    "cpu": "500m",
-                                    "memory": "256Mi"
+                                    "cpu": "200m",
+                                    "memory": "128Mi"
                                 }
                             }
                         }
@@ -217,6 +217,55 @@ def enter_course(request, course_id):
         return JsonResponse({"error": "Course not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
+
+
+@csrf_exempt
+@api_view(['GET'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def leave_course(request, course_id):
+    try:
+        return JsonResponse({"message": f"Successfully left the class. course_id : {course_id}"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
+
+
+@csrf_exempt
+@api_view(['DELETE'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def drop_course(request, course_id):
+    try:
+        if request.user.user_type != 's':
+            return JsonResponse({"error": "Only students can drop courses"}, status=403)
+
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return JsonResponse({"error": "Course not found"}, status=404)
+
+        if not course.participants.filter(id=request.user.id).exists():
+            return JsonResponse({"error": "You are not registered for this course"}, status=403)
+
+        try:
+            pod_name = f"{course.name.lower()}-{request.user.id}"
+            namespace = f"course-{course.id}"
+            config.load_kube_config()
+            v1 = client.CoreV1Api()
+            v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+
+            StudentPod.objects.filter(student=request.user, course=course).delete()
+        except client.exceptions.ApiException as e:
+            return JsonResponse({"error": f"Failed to delete Pod: {e}"}, status=500)
+
+        course.participants.remove(request.user)
+
+        return JsonResponse({"message": "Successfully dropped the course"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": "Internal server error", "details": str(e)}, status=500)
+
 
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
