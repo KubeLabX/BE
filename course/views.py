@@ -33,6 +33,11 @@ def create_course(request):
         )
         logger.info(f"[INFO] Course created with ID: {course.id}")
 
+        # namespace 설정
+        course.namespace = f"course-{course.id}"
+        course.save()
+        logger.info(f"[INFO] Course namespace set to: {course.namespace}")
+
         try:
             logger.info("[INFO] Attempting to load Kubernetes configuration.")
             config.load_incluster_config()  # Kubernetes 클러스터 설정 로드
@@ -43,13 +48,13 @@ def create_course(request):
                 "apiVersion": "v1",
                 "kind": "Namespace",
                 "metadata": {
-                    "name": f"course-{course.id}"
+                    "name": course.namespace
                 }
             }
             logger.info("[INFO] Namespace manifest prepared:", namespace_manifest)
 
             v1.create_namespace(body=namespace_manifest)
-            logger.infoint("[INFO] Namespace created successfully for course:", course.id)
+            logger.info("[INFO] Namespace created successfully for course:", course.id)
 
 
         except client.exceptions.ApiException as e:
