@@ -2,12 +2,13 @@ import json
 from venv import logger
 from django.views.decorators.csrf import csrf_exempt
 from course.models import Course
-from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from user.models import User
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from kubernetes import client, config
+from practice.models import StudentPod
 
 
 @csrf_exempt
@@ -36,18 +37,33 @@ def create_course(request):
             name=name.strip(),
             teacher=request.user
         )
-        
+        config.load_incluster_config()  # Kubernetes 클러스터 설정 로드
+        v1 = client.CoreV1Api()
+        namespace_manifest = {
+            "apiVersion": "v1",
+            "kind": "Namespace",
+            "metadata": {
+                "name": f"course-{course.id}"
+            }
+        }
+        v1.create_namespace(body=namespace_manifest)
+
         return JsonResponse({
             "message": "Course created successfully",
             "course_id": course.id,
             "course_name": course.name,
             "course_code": course.code
         }, status=201)
-    
-    #잘못된 형식
+
+    except client.exceptions.ApiException as e:
+        # k8s 네임스페이스 생성 실패 시 수업 삭제
+        course.delete()
+        return JsonResponse({"error": f"Failed to create k8s namespace: {e}"}, status=500)
+
+    # 잘못된 형식
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
-    #서버 오류
+    # 서버 오류
     except Exception:
         return JsonResponse({"error": "Internal server error"}, status=500)
 
@@ -155,7 +171,47 @@ def register_course(request):
             }, status=400)
         
         course.participants.add(request.user)
-        
+
+        # Pod 생성 로직
+        try:
+            pod_name = f"{course.name.lower()}-{request.user.id}"
+            namespace = f"course-{course.id}"
+            # 이미 Pod 정보가 존재하면 그대로 사용
+            if StudentPod.objects.filter(student=request.user, course=course).exists():
+                return JsonResponse({"message": "You have already been assigned a Pod.", "pod_name": pod_name},
+                                    status=200)
+            # Kubernetes Pod 생성
+            config.load_incluster_config()
+            v1 = client.CoreV1Api()
+            pod_manifest = {
+                "apiVersion": "v1",
+                "kind": "Pod",
+                "metadata": {
+                    "name": pod_name,
+                    "namespace": namespace
+                },
+                "spec": {
+                    "containers": [
+                        {
+                            "name": "terminal",
+                            "image": "linux-terminal-image",
+                            "resources": {
+                                "limits": {
+                                    "cpu": "500m",
+                                    "memory": "256Mi"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+            v1.create_namespaced_pod(namespace=namespace, body=pod_manifest)
+            # DB에 Pod 정보 저장
+            StudentPod.objects.create(student=request.user, course=course, pod_name=pod_name)
+
+        except client.exceptions.ApiException as e:
+            return JsonResponse({"error": f"Failed to create Pod: {e}"}, status=500)
+
         # 성공 응답(수업 id,name도 반환)
         return JsonResponse({
             "message": "Course registered successfully",
