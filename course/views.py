@@ -38,31 +38,32 @@ def create_course(request):
         course.save()
         logger.info(f"[INFO] Course namespace set to: {course.namespace}")
 
-        try:
-            logger.info("[INFO] Attempting to load Kubernetes configuration.")
-            config.load_incluster_config()  # Kubernetes 클러스터 설정 로드
-            logger.info("[INFO] Kubernetes configuration loaded successfully.")
-            v1 = client.CoreV1Api()
+        ##네임스페이스 생성 오류 생기는 부분분
+        # try:
+        #     logger.info("[INFO] Attempting to load Kubernetes configuration.")
+        #     config.load_incluster_config()  # Kubernetes 클러스터 설정 로드
+        #     logger.info("[INFO] Kubernetes configuration loaded successfully.")
+        #     v1 = client.CoreV1Api()
 
-            namespace_manifest = {
-                "apiVersion": "v1",
-                "kind": "Namespace",
-                "metadata": {
-                    "name": course.namespace
-                }
-            }
-            logger.info("[INFO] Namespace manifest prepared:", namespace_manifest)
+        #     namespace_manifest = {
+        #         "apiVersion": "v1",
+        #         "kind": "Namespace",
+        #         "metadata": {
+        #             "name": course.namespace
+        #         }
+        #     }
+        #     logger.info("[INFO] Namespace manifest prepared:", namespace_manifest)
 
-            v1.create_namespace(body=namespace_manifest)
-            logger.info("[INFO] Namespace created successfully for course:", course.id)
+        #     v1.create_namespace(body=namespace_manifest)
+        #     logger.info("[INFO] Namespace created successfully for course:", course.id)
 
 
-        except client.exceptions.ApiException as e:
-            logger.error(f"K8s API Exception: {str(e)}")  # 로그 추가
-            # Kubernetes 네임스페이스 생성 실패 시 수업 삭제
-            course.delete()
-            logger.error(f"Course {course.id} deleted successfully")
-            return JsonResponse({"error": f"Failed to create Kubernetes namespace: {e}"}, status=500)
+        # except client.exceptions.ApiException as e:
+        #     logger.error(f"K8s API Exception: {str(e)}")  # 로그 추가
+        #     # Kubernetes 네임스페이스 생성 실패 시 수업 삭제
+        #     course.delete()
+        #     logger.error(f"Course {course.id} deleted successfully")
+        #     return JsonResponse({"error": f"Failed to create Kubernetes namespace: {e}"}, status=500)
 
         return JsonResponse({
             "message": "Course created successfully",
@@ -71,10 +72,10 @@ def create_course(request):
             "course_code": course.code
         }, status=201)
 
-    except client.exceptions.ApiException as e:
-        # k8s 네임스페이스 생성 실패 시 수업 삭제
-        course.delete()
-        return JsonResponse({"error": f"Failed to create k8s namespace: {e}"}, status=500)
+    # except client.exceptions.ApiException as e:
+    #     # k8s 네임스페이스 생성 실패 시 수업 삭제
+    #     course.delete()
+    #     return JsonResponse({"error": f"Failed to create k8s namespace: {e}"}, status=500)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
@@ -182,52 +183,52 @@ def register_course(request):
         
         course.participants.add(request.user)
 
-        # Pod 생성 로직
-        try:
-            pod_name = f"{course.name.lower()}-{request.user.id}"
-            namespace = f"course-{course.id}"
-            logger.info(f"Creating Pod: {pod_name} in namespace: {namespace}")
+        # Pod 생성 로직(미완)
+        # try:
+        #     pod_name = f"{course.name.lower()}-{request.user.id}"
+        #     namespace = f"course-{course.id}"
+        #     logger.info(f"Creating Pod: {pod_name} in namespace: {namespace}")
 
 
-            if StudentPod.objects.filter(student=request.user, course=course).exists():
-                return JsonResponse({"message": "You have already been assigned a Pod.", "pod_name": pod_name}, status=200)
+        #     if StudentPod.objects.filter(student=request.user, course=course).exists():
+        #         return JsonResponse({"message": "You have already been assigned a Pod.", "pod_name": pod_name}, status=200)
 
-            config.load_incluster_config()
-            logger.info("Kubernetes configuration loaded.")
-            v1 = client.CoreV1Api()
-            pod_manifest = {
-                "apiVersion": "v1",
-                "kind": "Pod",
-                "metadata": {
-                    "name": pod_name,
-                    "namespace": namespace
-                },
-                "spec": {
-                    "containers": [
-                        {
-                            "name": "terminal",
-                            "image": "ubuntu",
-                            "resources": {
-                                "limits": {
-                                    "cpu": "200m",
-                                    "memory": "128Mi"
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-            logger.info("Pod manifest prepared:", pod_manifest)
+        #     config.load_incluster_config()
+        #     logger.info("Kubernetes configuration loaded.")
+        #     v1 = client.CoreV1Api()
+        #     pod_manifest = {
+        #         "apiVersion": "v1",
+        #         "kind": "Pod",
+        #         "metadata": {
+        #             "name": pod_name,
+        #             "namespace": namespace
+        #         },
+        #         "spec": {
+        #             "containers": [
+        #                 {
+        #                     "name": "terminal",
+        #                     "image": "ubuntu",
+        #                     "resources": {
+        #                         "limits": {
+        #                             "cpu": "200m",
+        #                             "memory": "128Mi"
+        #                         }
+        #                     }
+        #                 }
+        #             ]
+        #         }
+        #     }
+        #     logger.info("Pod manifest prepared:", pod_manifest)
 
-            v1.create_namespaced_pod(namespace=namespace, body=pod_manifest)
-            logger.info("Pod created successfully in Kubernetes:", pod_name)
+        #     v1.create_namespaced_pod(namespace=namespace, body=pod_manifest)
+        #     logger.info("Pod created successfully in Kubernetes:", pod_name)
 
-            StudentPod.objects.create(student=request.user, course=course, pod_name=pod_name)
-            logger.info("Pod information saved in database:", pod_name)
+        #     StudentPod.objects.create(student=request.user, course=course, pod_name=pod_name)
+        #     logger.info("Pod information saved in database:", pod_name)
 
-        except client.exceptions.ApiException as e:
-            logger.info("Kubernetes API exception occurred:", str(e))
-            return JsonResponse({"error": f"Failed to create Pod: {e}"}, status=500)
+        # except client.exceptions.ApiException as e:
+        #     logger.info("Kubernetes API exception occurred:", str(e))
+        #     return JsonResponse({"error": f"Failed to create Pod: {e}"}, status=500)
 
         # 성공 응답(수업 id,name도 반환)
         return JsonResponse({
